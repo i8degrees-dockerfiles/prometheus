@@ -7,7 +7,7 @@ dist/**
 mounts/**
 
 # symbolic links
-promethus.yml
+prometheus.yml
 
 tmp/**
 
