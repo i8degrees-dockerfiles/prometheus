@@ -1,3 +1,7 @@
+# Prometheus Docker compose project
+#
+# SEE ALSO
+# 1. https://hub.docker.com/r/prom/prometheus
 #
 ---
 
@@ -16,19 +20,25 @@ volumes:
 services:
     prometheus:
       restart: always
-      image: prom/prometheus:latest
+      image: prom/prometheus:v2.53.5
       container_name: prometheus-1
       networks:
         - traefik-proxy
       ports:
         - "9090:9090"
-        #- "11090:9090"
       volumes:
         - ./mounts/config/prometheus.yml:/etc/prometheus/prometheus.yml
-        - prometheus_cache:/prometheus # Persist Prometheus data
+          # Persistant Prometheus cache; aggregation of time series data...
+        - prometheus_cache:/prometheus
       command:
         - '--config.file=/etc/prometheus/prometheus.yml'
         - '--web.enable-lifecycle' # Allows reloading config without restarting
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.prometheus-fs1.rule=Host(`prometheus.fs1.home`) && PathPrefix(`/`)"
+        - "traefik.http.routers.prometheus-fs1.entrypoints=websecure"
+        - "traefik.http.services.prometheus-fs1.loadbalancer.server.port=9090"
+        - "traefik.http.routers.prometheus-fs1.service=prometheus-fs1"
 
     #node_exporter:
       #image: prom/node-exporter
