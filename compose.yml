@@ -19,7 +19,7 @@ volumes:
 
 services:
     prometheus:
-      restart: always
+      restart: unless-stopped
       image: prom/prometheus:v2.53.5
       container_name: prometheus-1
       networks:
@@ -27,6 +27,8 @@ services:
       ports:
         - "9090:9090"
       volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/ssl/certs:/etc/ssl/certs:ro
         - ./mounts/config/prometheus.yml:/etc/prometheus/prometheus.yml
           # Persistant Prometheus cache; aggregation of time series data...
         - prometheus_cache:/prometheus
@@ -39,18 +41,38 @@ services:
         - "traefik.http.routers.prometheus-fs1.entrypoints=websecure"
         - "traefik.http.services.prometheus-fs1.loadbalancer.server.port=9090"
         - "traefik.http.routers.prometheus-fs1.service=prometheus-fs1"
+        - "traefik.http.routers.prometheus-fs1.tls.certresolver=staging-web-acme"
 
-    #node_exporter:
-      #image: prom/node-exporter
-      #container_name: node_exporter
-      #ports:
-      #- "9100:9100"
-      #volumes:
-      #- /proc:/host/proc:ro
-      #- /sys:/host/sys:ro
-      #- /:/rootfs:ro
-      #command:
-      #- '--path.procfs=/host/proc'
-      #- '--path.sysfs=/host/sys'
-      #- '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    # TODO(JEFF): We must carefully consider how to integrate our host's 
+    # metrics collector (below) with the existing metrics provided by Traefik;
+    # I wish to utilize the PathPrefix component and choose a standard name
+    # reference that works with this style.
+    #
+    # dash.fs1.home/traefik-metrics (Traefik prometheus)
+    # docker.fs1.home/metrics (host prometheus?)
+    # prometheus.fs1.home/metrics (aggregation?)
+    #
+    node_exporter:
+      restart: always
+      image: prom/node-exporter:latest
+      container_name: prometheus-node-exporter-1
+      networks:
+        - traefik-proxy
+      ports:
+        - "127.0.0.1:9100:9100/tcp"
+      volumes:
+        - "/proc:/host/proc:ro"
+        - "/sys:/host/sys:ro"
+        - "/:/rootfs:ro"
+      command:
+        - "--path.procfs=/host/proc"
+        - "--path.sysfs=/host/sys"
+        - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.metrics-fs1.rule=Host(`docker.fs1.home`) && PathPrefix(`/metrics`)"
+        - "traefik.http.routers.metrics-fs1.entrypoints=websecure"
+        - "traefik.http.services.metrics-fs1.loadbalancer.server.port=9100"
+        - "traefik.http.routers.metrics-fs1.service=metrics-fs1"
+        - "traefik.http.routers.metrics-fs1.tls.certresolver=staging-web-acme"
 
