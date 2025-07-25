@@ -4,9 +4,6 @@ dist/**
 .env
 !.env.dist
 
-mounts/**
-!mounts/config/**
-
 # symbolic links
 prometheus.yml
 
