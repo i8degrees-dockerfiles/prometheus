@@ -24,7 +24,7 @@ scrape_configs:
         - fs1.home
         - docker.fs1.home
         - pbs1.home
-  - job_name: pdns_metrics-http
+  - job_name: pdns_metrics-https
     scrape_interval: 60s
     scheme: https
     static_configs:
@@ -33,6 +33,12 @@ scrape_configs:
           - ns4.fs1.home
           - ns3-auth.fs1.home
           - ns4-auth.fs1.home
+  - job_name: notifications_metrics-https
+    scrape_interval: 60s
+    scheme: https
+    static_configs:
+      - targets:
+        - notifications.home
   #- job_name: traefik_logs-https
   #scrape_interval: 10s
   #scheme: https
